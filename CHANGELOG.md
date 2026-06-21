@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This file is managed
 automatically by [release-please](https://github.com/googleapis/release-please)
 from [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.2.0](https://github.com/toussahpoual/sonosregie/compare/sonosregie-v0.1.0...sonosregie-v0.2.0) (2026-06-21)
+
+
+### Features
+
+* deploy from the image alone; drop set-mode.sh ([c529a5e](https://github.com/toussahpoual/sonosregie/commit/c529a5e50761029b9d20867862778cfe99fdc032))
+
 ## 0.1.0 (2026-06-21)
 
 
