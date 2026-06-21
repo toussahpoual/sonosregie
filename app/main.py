@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="Sonos Scheduler", lifespan=lifespan)
+app = FastAPI(title="Sonosregie", lifespan=lifespan)
 
 
 # ----------------------------- Schemas (entrée) ---------------------------------

@@ -1,9 +1,9 @@
 [Unit]
-Description=oauth2-proxy (Authentik SSO) devant Sonos Scheduler
+Description=oauth2-proxy (Authentik SSO) devant Sonosregie
 Documentation=https://oauth2-proxy.github.io/oauth2-proxy/
-After=network-online.target sonos-scheduler.service
+After=network-online.target sonosregie.service
 Wants=network-online.target
-Requires=sonos-scheduler.service
+Requires=sonosregie.service
 
 [Container]
 Image=quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
@@ -11,7 +11,7 @@ Image=quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
 Network=host
 # Secrets + valeurs propres au site (client_id/secret, cookie secret, OIDC_ISSUER_URL,
 # REDIRECT_URL) : écrits par le bootstrap dans cet EnvironmentFile, hors du dépôt.
-EnvironmentFile=%h/.config/sonos-scheduler/oauth2-proxy.env
+EnvironmentFile=%h/.config/sonosregie/oauth2-proxy.env
 Environment=OAUTH2_PROXY_PROVIDER=oidc
 # Valeurs contenant des espaces -> QUOTER (systemd Environment= découpe sinon).
 Environment="OAUTH2_PROXY_PROVIDER_DISPLAY_NAME=Authentik SSO"

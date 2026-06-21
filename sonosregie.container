@@ -1,13 +1,13 @@
 [Unit]
-Description=Sonos Scheduler — pilotage webradio planifié des enceintes Sonos
+Description=Sonosregie — pilotage webradio planifié des enceintes Sonos
 After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=localhost/sonos-scheduler:latest
+Image=localhost/sonosregie:latest
 # Réseau hôte : indispensable pour joindre les enceintes Sonos en LAN/VPN (unicast 1400).
 Network=host
-Volume=%h/.local/share/sonos-scheduler:/data:Z
+Volume=%h/.local/share/sonosregie:/data:Z
 Environment=SONOS_DATA_DIR=/data
 # Heure française : le réconciliateur planifie sur l'horloge locale du conteneur.
 Environment=TZ=Europe/Paris

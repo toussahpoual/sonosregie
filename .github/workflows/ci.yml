@@ -33,4 +33,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build container image
-        run: docker build -f Containerfile -t sonos-scheduler:ci .
+        run: docker build -f Containerfile -t sonosregie:ci .

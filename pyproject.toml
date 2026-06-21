@@ -1,5 +1,5 @@
 [project]
-name = "sonos-scheduler"
+name = "sonosregie"
 version = "0.1.0"
 description = "Schedule web-radio playback on Sonos / Symfonisk speakers across multiple sites, by IP."
 readme = "README.md"

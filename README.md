@@ -1,4 +1,4 @@
-# Sonos Scheduler
+# Sonosregie
 
 Schedule **web-radio (HTTP stream) playback** on **Sonos / Symfonisk** speakers
 spread across multiple sites, addressed by **IP**.
@@ -40,25 +40,25 @@ If `end <= start`, the slot crosses midnight.
 
 ```bash
 git clone https://github.com/toussahpoual/sonosregie.git
-cd sonos-scheduler
-podman build -t localhost/sonos-scheduler:latest .
+cd sonosregie
+podman build -t localhost/sonosregie:latest .
 
-mkdir -p ~/.local/share/sonos-scheduler
-cp sonos-scheduler.container ~/.config/containers/systemd/
+mkdir -p ~/.local/share/sonosregie
+cp sonosregie.container ~/.config/containers/systemd/
 systemctl --user daemon-reload
-systemctl --user start sonos-scheduler.service
+systemctl --user start sonosregie.service
 ```
 
 Open `http://YOUR_HOST_IP:8095/` — API docs at `/docs`. The container uses host
 networking (required to reach Sonos devices on the LAN) and stores its SQLite DB
-in `~/.local/share/sonos-scheduler`.
+in `~/.local/share/sonosregie`.
 
 ### Run with Docker instead
 
 ```bash
-docker build -t sonos-scheduler .
-docker run -d --name sonos-scheduler --network host \
-  -v sonos-data:/data sonos-scheduler
+docker build -t sonosregie .
+docker run -d --name sonosregie --network host \
+  -v sonos-data:/data sonosregie
 ```
 
 ### Develop locally (no container)
@@ -76,17 +76,17 @@ for [Authentik](https://goauthentik.io/) is provided (other OIDC providers work 
 just create the env file yourself, see `auth/.env.example`).
 
 ```bash
-mkdir -p ~/.config/sonos-scheduler
+mkdir -p ~/.config/sonosregie
 export AUTHENTIK_TOKEN=...                       # admin API token
 podman run --rm --network host \
   -e AUTHENTIK_TOKEN \
   -e AUTHENTIK_URL=https://auth.example.com \
   -e PUBLIC_HOST=YOUR_HOST_IP \
   -v "$PWD/auth:/auth:z" \
-  -v ~/.config/sonos-scheduler:/out:Z \
-  localhost/sonos-scheduler python /auth/authentik_bootstrap.py
+  -v ~/.config/sonosregie:/out:Z \
+  localhost/sonosregie python /auth/authentik_bootstrap.py
 # -> creates provider + application + group "sonos-users",
-#    writes ~/.config/sonos-scheduler/oauth2-proxy.env (0600, secrets)
+#    writes ~/.config/sonosregie/oauth2-proxy.env (0600, secrets)
 
 # Add your user to the "sonos-users" group in your IdP, then:
 ./auth/set-mode.sh auth      # app internal :8096, oauth2-proxy on :8095

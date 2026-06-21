@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving Sonos Scheduler! Contributions of all
+Thanks for your interest in improving Sonosregie! Contributions of all
 kinds are welcome — bug reports, features, docs, tests.
 
 ## Development setup

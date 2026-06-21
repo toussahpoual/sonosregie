@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "package-name": "sonos-scheduler",
+      "package-name": "sonosregie",
       "changelog-path": "CHANGELOG.md"
     }
   }

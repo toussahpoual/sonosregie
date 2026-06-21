@@ -37,5 +37,5 @@ body:
     id: logs
     attributes:
       label: Relevant logs
-      description: e.g. `journalctl --user -u sonos-scheduler.service` (redact secrets)
+      description: e.g. `journalctl --user -u sonosregie.service` (redact secrets)
       render: shell

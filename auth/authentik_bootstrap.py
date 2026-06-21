@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Bootstrap an Authentik provider to protect Sonos Scheduler behind oauth2-proxy.
+"""Bootstrap an Authentik provider to protect Sonosregie behind oauth2-proxy.
 
 Idempotent. Creates/updates:
   - 1 confidential OAuth2/OIDC Provider (redirect = oauth2-proxy callback)
-  - 1 Application (slug: sonos-scheduler)
+  - 1 Application (slug: sonosregie)
   - 1 dedicated Group (default: sonos-users)
   - 1 policy binding Group -> Application (access restricted to the group)
 Then writes the oauth2-proxy EnvironmentFile (client id/secret + cookie secret +
@@ -30,8 +30,8 @@ URL = (os.environ.get("AUTHENTIK_URL") or "").rstrip("/")
 if not URL:
     sys.exit("AUTHENTIK_URL is required (e.g. https://auth.example.com)")
 TOKEN = os.environ.get("AUTHENTIK_TOKEN") or sys.exit("AUTHENTIK_TOKEN is required")
-APP_SLUG = os.environ.get("APP_SLUG", "sonos-scheduler")
-APP_NAME = os.environ.get("APP_NAME", "Sonos Scheduler")
+APP_SLUG = os.environ.get("APP_SLUG", "sonosregie")
+APP_NAME = os.environ.get("APP_NAME", "Sonosregie")
 GROUP = os.environ.get("GROUP_NAME", "sonos-users")
 _PUBLIC_HOST = os.environ.get("PUBLIC_HOST")
 REDIRECT = os.environ.get(
@@ -40,7 +40,7 @@ REDIRECT = os.environ.get(
 )
 OUT = os.environ.get("ENV_OUT", "/out/oauth2-proxy.env")
 ISSUER = f"{URL}/application/o/{APP_SLUG}/"
-UA = "Mozilla/5.0 (sonos-scheduler-bootstrap)"
+UA = "Mozilla/5.0 (sonosregie-bootstrap)"
 API = URL + "/api/v3"
 
 

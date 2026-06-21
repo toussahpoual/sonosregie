@@ -10,7 +10,7 @@ We aim to acknowledge reports within a few days.
 
 ## Threat model & expectations
 
-Sonos Scheduler is a small self-hosted utility. Keep in mind:
+Sonosregie is a small self-hosted utility. Keep in mind:
 
 - **The app has no built-in authentication.** Run it on a trusted LAN, or put it
   behind the bundled oauth2-proxy (`auth/`) for SSO. In "open" mode, anyone who
