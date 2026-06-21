@@ -7,12 +7,39 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v5
+      - id: rp
+        uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # Build & publish the image in THIS run when a release was just cut.
+      # (A release created by GITHUB_TOKEN cannot trigger a separate `on: release`
+      #  workflow, so we build here. Tags come from the release-please outputs —
+      #  clean semver, no component prefix.)
+      - uses: actions/checkout@v7
+        if: ${{ steps.rp.outputs.release_created }}
+      - uses: docker/setup-buildx-action@v4
+        if: ${{ steps.rp.outputs.release_created }}
+      - uses: docker/login-action@v3
+        if: ${{ steps.rp.outputs.release_created }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        if: ${{ steps.rp.outputs.release_created }}
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.rp.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ steps.rp.outputs.major }}.${{ steps.rp.outputs.minor }}
+            ghcr.io/${{ github.repository }}:latest
