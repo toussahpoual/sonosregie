@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This file is managed
 automatically by [release-please](https://github.com/googleapis/release-please)
 from [Conventional Commits](https://www.conventionalcommits.org/).
 
+## 0.1.0 (2026-06-21)
+
+
+### Features
+
+* initial public release ([7f53864](https://github.com/toussahpoual/sonosregie/commit/7f53864b36aa118b60a0864420906d8c7b597eb1))
+
 ## 0.1.0 (unreleased)
 
 Initial public release.
