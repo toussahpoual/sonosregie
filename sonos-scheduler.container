@@ -1,0 +1,24 @@
+[Unit]
+Description=Sonos Scheduler — pilotage webradio planifié des enceintes Sonos
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/sonos-scheduler:latest
+# Réseau hôte : indispensable pour joindre les enceintes Sonos en LAN/VPN (unicast 1400).
+Network=host
+Volume=%h/.local/share/sonos-scheduler:/data:Z
+Environment=SONOS_DATA_DIR=/data
+# Heure française : le réconciliateur planifie sur l'horloge locale du conteneur.
+Environment=TZ=Europe/Paris
+HealthCmd=python -c "import os,urllib.request,sys; p=os.environ.get('BIND_PORT','8095'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{p}/healthz').status==200 else 1)"
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

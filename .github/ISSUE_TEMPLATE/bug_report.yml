@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / image tag
+    validations:
+      required: false
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Auth mode
+      options:
+        - open (no auth)
+        - oauth2-proxy / OIDC
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: e.g. `journalctl --user -u sonos-scheduler.service` (redact secrets)
+      render: shell

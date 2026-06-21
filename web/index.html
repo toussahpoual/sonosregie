@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RÉGIE — Sonos Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#100e0b; --bg2:#17140f; --panel:#1c1812; --panel2:#221d15;
+    --line:#2e271c; --line2:#3b3122;
+    --cream:#efe7d6; --dim:#8c8069; --faint:#5c5343;
+    --amber:#ff7a1a; --amber-soft:#ffb061; --amber-glow:rgba(255,122,26,.45);
+    --red:#ff4d3d; --green:#67d093;
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(255,122,26,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,122,26,.06), transparent 55%),
+      var(--bg);
+    color:var(--cream);
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* grain */
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:9999; opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::selection{background:var(--amber);color:#1a1206}
+
+  /* ---------- top bar ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:22px;
+    padding:14px 26px;
+    background:linear-gradient(180deg, rgba(16,14,11,.96), rgba(16,14,11,.82));
+    border-bottom:1px solid var(--line);
+    backdrop-filter:blur(10px);
+  }
+  .brand{display:flex; align-items:center; gap:14px}
+  .brand .mark{
+    width:13px;height:13px;border-radius:50%;
+    background:var(--amber); box-shadow:0 0 0 4px rgba(255,122,26,.15), 0 0 18px var(--amber-glow);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .brand h1{
+    font-family:"Big Shoulders Display",sans-serif; font-weight:800;
+    font-size:30px; letter-spacing:.06em; line-height:.9; text-transform:uppercase;
+  }
+  .brand h1 small{display:block;font-size:10px;letter-spacing:.42em;color:var(--dim);font-weight:600}
+
+  /* mini VU bars */
+  .vu{display:flex;align-items:flex-end;gap:3px;height:26px;margin-left:2px}
+  .vu i{width:3px;background:linear-gradient(180deg,var(--amber),#7a3a08);border-radius:2px;animation:vu 1.1s ease-in-out infinite}
+  .vu i:nth-child(2){animation-delay:.15s}.vu i:nth-child(3){animation-delay:.3s}
+  .vu i:nth-child(4){animation-delay:.05s}.vu i:nth-child(5){animation-delay:.25s}
+  @keyframes vu{0%,100%{height:20%}50%{height:100%}}
+
+  header .spacer{flex:1}
+  .clock{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);letter-spacing:.08em}
+  .onair{
+    display:flex;align-items:center;gap:9px;
+    border:1px solid var(--line2);border-radius:999px;padding:7px 14px;
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+  }
+  .onair.live{border-color:var(--amber);color:var(--amber-soft);box-shadow:0 0 22px rgba(255,122,26,.18)}
+  .onair b{font-family:"Big Shoulders Display";font-size:17px;font-weight:800;color:var(--cream)}
+
+  /* ---------- nav tabs ---------- */
+  nav{
+    display:flex;gap:4px;padding:16px 26px 0;flex-wrap:wrap;
+    max-width:1180px;margin:0 auto;width:100%;
+  }
+  .tab{
+    appearance:none;border:1px solid transparent;background:none;cursor:pointer;
+    color:var(--dim);font-family:"Big Shoulders Display";font-weight:700;font-size:19px;
+    letter-spacing:.05em;text-transform:uppercase;padding:9px 16px;border-radius:10px 10px 0 0;
+    transition:.18s;
+  }
+  .tab:hover{color:var(--cream)}
+  .tab.active{color:var(--amber);background:var(--panel);border-color:var(--line);border-bottom-color:transparent}
+  .tab .n{font-family:"IBM Plex Mono";font-size:11px;color:var(--faint);margin-left:7px}
+
+  main{max-width:1180px;margin:0 auto;padding:0 26px 80px;width:100%}
+  .view{display:none;animation:rise .4s ease both}
+  .view.active{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .view-head{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    padding:26px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap;
+  }
+  .view-head .t{font-family:"Big Shoulders Display";font-weight:800;font-size:34px;letter-spacing:.04em;text-transform:uppercase;line-height:.95}
+  .view-head .sub{color:var(--dim);font-size:12px;margin-top:4px;max-width:60ch}
+
+  /* ---------- buttons ---------- */
+  button.act{
+    appearance:none;cursor:pointer;font-family:"IBM Plex Mono";font-weight:600;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;border-radius:10px;padding:10px 16px;
+    border:1px solid var(--line2);background:var(--panel2);color:var(--cream);transition:.15s;
+  }
+  button.act:hover{border-color:var(--amber);color:var(--amber-soft)}
+  button.act.primary{background:var(--amber);color:#1a1206;border-color:var(--amber)}
+  button.act.primary:hover{background:var(--amber-soft);box-shadow:0 6px 24px var(--amber-glow)}
+  button.act.ghost{background:none}
+  button.mini{font-size:11px;padding:6px 11px;border-radius:8px}
+  button.danger:hover{border-color:var(--red);color:var(--red)}
+
+  /* ---------- cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:16px}
+  .card{
+    position:relative;background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--line);border-radius:var(--r);padding:18px;overflow:hidden;
+    transition:.18s;
+  }
+  .card:hover{border-color:var(--line2);transform:translateY(-2px)}
+  .card .strip{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--faint)}
+  .card.playing .strip{background:var(--amber);box-shadow:0 0 16px var(--amber-glow)}
+  .card.down .strip{background:var(--red)}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+  .card h3{font-family:"Big Shoulders Display";font-weight:700;font-size:23px;letter-spacing:.03em;line-height:1}
+  .card .meta{color:var(--dim);font-size:11.5px;margin-top:5px;word-break:break-all}
+  .card .meta b{color:var(--cream);font-weight:500}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    border:1px solid var(--line2);border-radius:999px;padding:5px 10px;color:var(--dim);white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+  .pill.live{color:var(--amber-soft);border-color:var(--amber)} .pill.live .dot{background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 1.6s infinite}
+  .pill.ok .dot{background:var(--green)}
+  .pill.down{color:var(--red);border-color:rgba(255,77,61,.4)} .pill.down .dot{background:var(--red);animation:pulse 1s infinite}
+
+  .card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .statusline{font-size:11.5px;color:var(--dim);margin-top:12px;min-height:18px}
+  .statusline .em{color:var(--amber-soft)}
+
+  /* schedule rows */
+  .slotrow{display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--line);
+    border-radius:12px;background:var(--panel);margin-bottom:10px;flex-wrap:wrap}
+  .slotrow.off{opacity:.5}
+  .slotrow .time{font-family:"Big Shoulders Display";font-weight:800;font-size:26px;letter-spacing:.02em;white-space:nowrap}
+  .slotrow .time span{color:var(--faint);margin:0 6px;font-weight:400}
+  .slotrow .chain{flex:1;min-width:200px}
+  .slotrow .chain .a{color:var(--cream)} .slotrow .chain .b{color:var(--amber-soft)}
+  .slotrow .chain .arrow{color:var(--faint);margin:0 8px}
+  .days{display:flex;gap:4px}
+  .days .d{width:24px;height:24px;display:grid;place-items:center;font-size:11px;border-radius:6px;
+    border:1px solid var(--line2);color:var(--faint)}
+  .days .d.on{background:var(--amber);color:#1a1206;border-color:var(--amber);font-weight:600}
+
+  .empty{text-align:center;color:var(--dim);padding:60px 20px;border:1px dashed var(--line2);border-radius:14px}
+  .empty .big{font-family:"Big Shoulders Display";font-size:26px;color:var(--faint);margin-bottom:8px;letter-spacing:.05em}
+
+  /* ---------- dialog ---------- */
+  dialog{
+    border:1px solid var(--line2);border-radius:18px;background:var(--bg2);color:var(--cream);
+    padding:0;width:min(520px,94vw);box-shadow:0 30px 90px rgba(0,0,0,.6);
+    /* le reset `* {margin:0}` tue le margin:auto par défaut du <dialog> -> recentrer */
+    inset:0;margin:auto;max-height:90vh;overflow:auto;
+  }
+  dialog::backdrop{background:rgba(8,7,5,.72);backdrop-filter:blur(3px)}
+  .dlg-head{padding:20px 24px;border-bottom:1px solid var(--line);
+    font-family:"Big Shoulders Display";font-weight:800;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
+  .dlg-body{padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+  .field label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .field input,.field select{
+    width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:10px;
+    color:var(--cream);font-family:"IBM Plex Mono";font-size:13px;padding:11px 13px;outline:none;transition:.15s;
+  }
+  .field input:focus,.field select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,122,26,.12)}
+  .field .hint{font-size:10.5px;color:var(--faint);margin-top:5px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .switch{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .switch input{display:none}
+  .switch .track{width:42px;height:24px;border-radius:999px;background:var(--line2);position:relative;transition:.2s}
+  .switch .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--dim);transition:.2s}
+  .switch input:checked + .track{background:var(--amber)}
+  .switch input:checked + .track::after{transform:translateX(18px);background:#1a1206}
+  .dayspick{display:flex;gap:6px;flex-wrap:wrap}
+  .dayspick .d{cursor:pointer;width:36px;height:34px;display:grid;place-items:center;border-radius:8px;
+    border:1px solid var(--line2);color:var(--dim);font-size:12px;transition:.15s}
+  .dayspick .d.on{background:var(--amber);color:#1a1206;border-color:var(--amber);font-weight:600}
+  .dlg-foot{padding:16px 24px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+  .err{color:var(--red);font-size:12px;padding:0 24px 12px}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:860px){
+    .vu{display:none}
+    header{gap:14px;padding:12px 16px}
+    nav{padding-left:16px;padding-right:16px}
+    main{padding-left:16px;padding-right:16px;padding-bottom:60px}
+    .view-head .t{font-size:30px}
+  }
+  @media(max-width:560px){
+    .brand h1{font-size:22px}
+    .brand h1 small{font-size:9px;letter-spacing:.30em}
+    .clock{display:none}
+    header{gap:10px;padding:11px 14px}
+    .tab{font-size:17px;padding:8px 11px}
+    .tab .n{margin-left:5px}
+    .onair{padding:6px 10px;font-size:9.5px;letter-spacing:.10em;gap:6px}
+    .onair b{font-size:14px}
+    .row2{grid-template-columns:1fr}
+    .view-head{align-items:stretch}
+    .view-head .t{font-size:26px}
+    .view-head .sub{font-size:11.5px}
+    .view-head .act.primary{width:100%}
+    .dlg-head{font-size:21px}
+    .slotrow{gap:9px 10px;padding:13px 14px}
+    .slotrow .time{order:1;margin-right:auto;font-size:23px}
+    .slotrow>button:nth-of-type(1){order:2}
+    .slotrow>button:nth-of-type(2){order:3}
+    .slotrow .chain{order:5;flex-basis:100%;min-width:0}
+    .slotrow .days{order:6}
+  }
+  @media(max-width:380px){
+    .brand h1 small{display:none}
+    .onair{font-size:0;gap:0;padding:6px 8px}
+    .onair .dot{width:9px;height:9px}
+    .onair b{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="mark"></span>
+    <h1>Régie<small>Sonos Scheduler</small></h1>
+    <div class="vu"><i style="height:60%"></i><i style="height:90%"></i><i style="height:40%"></i><i style="height:75%"></i><i style="height:55%"></i></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="clock" id="clock">--:--:--</div>
+  <div class="onair" id="onair"><span class="dot"></span>EN ANTENNE&nbsp;<b id="liveCount">0</b></div>
+  <button class="act ghost mini" onclick="forceSync(this)">⟲ Synchro</button>
+</header>
+
+<nav>
+  <button class="tab active" data-view="speakers">Enceintes<span class="n" id="cSpk">0</span></button>
+  <button class="tab" data-view="streams">Webradios<span class="n" id="cStr">0</span></button>
+  <button class="tab" data-view="slots">Programmation<span class="n" id="cSlo">0</span></button>
+</nav>
+
+<main>
+  <!-- ENCEINTES -->
+  <section class="view active" id="view-speakers">
+    <div class="view-head">
+      <div><div class="t">Enceintes</div><div class="sub">Vos Sonos / Symfonisk, jointes par IP. L'état est rafraîchi en continu par le réconciliateur.</div></div>
+      <button class="act primary" onclick="openSpeaker()">+ Ajouter une enceinte</button>
+    </div>
+    <div class="grid" id="speakersGrid"></div>
+  </section>
+
+  <!-- WEBRADIOS -->
+  <section class="view" id="view-streams">
+    <div class="view-head">
+      <div><div class="t">Webradios</div><div class="sub">Flux HTTP continus à diffuser. Privilégier des URL http (le https natif Sonos est capricieux).</div></div>
+      <button class="act primary" onclick="openStream()">+ Ajouter une webradio</button>
+    </div>
+    <div class="grid" id="streamsGrid"></div>
+  </section>
+
+  <!-- PROGRAMMATION -->
+  <section class="view" id="view-slots">
+    <div class="view-head">
+      <div><div class="t">Programmation</div><div class="sub">Tranches horaires : quelle webradio sur quelle enceinte, quels jours. Si une enceinte était éteinte au démarrage, elle est rattrapée automatiquement.</div></div>
+      <button class="act primary" onclick="openSlot()">+ Nouvelle tranche</button>
+    </div>
+    <div id="slotsList"></div>
+  </section>
+</main>
+
+<!-- dialog réutilisé -->
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <div class="dlg-head" id="dlgTitle">—</div>
+    <div class="dlg-body" id="dlgBody"></div>
+    <div class="err" id="dlgErr" style="display:none"></div>
+    <div class="dlg-foot">
+      <button class="act ghost" type="button" onclick="dlg.close()">Annuler</button>
+      <button class="act primary" type="button" id="dlgSave">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const DAYS = ["L","M","M","J","V","S","D"];
+const DAYS_FULL = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+const $ = s => document.querySelector(s);
+const dlg = $("#dlg");
+let speakers=[], streams=[], slots=[], statusMap={};
+
+// ---------- api ----------
+async function api(method, path, body){
+  const opt={method, headers:{"Content-Type":"application/json"}};
+  if(body!==undefined) opt.body=JSON.stringify(body);
+  const r=await fetch(path, opt);
+  if(!r.ok){
+    const raw=await r.text().catch(()=>"");
+    let msg=raw;
+    try{ const j=JSON.parse(raw);
+      if(typeof j.detail==="string") msg=j.detail;
+      else if(Array.isArray(j.detail)) msg=j.detail.map(d=>d.msg||JSON.stringify(d)).join(" ; ");
+    }catch{/* texte brut */}
+    throw new Error(msg||r.statusText||r.status);
+  }
+  return r.status===204?null:r.json();
+}
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ---------- load + render ----------
+async function loadAll(){
+  [speakers, streams, slots] = await Promise.all([
+    api("GET","/api/speakers"), api("GET","/api/streams"), api("GET","/api/slots")
+  ]);
+  $("#cSpk").textContent=speakers.length;
+  $("#cStr").textContent=streams.length;
+  $("#cSlo").textContent=slots.length;
+  renderSpeakers(); renderStreams(); renderSlots();
+}
+async function loadStatus(){
+  try{
+    const list=await api("GET","/api/status");
+    statusMap={}; list.forEach(s=>{ const sp=speakers.find(x=>x.name===s.name && x.ip===s.ip); if(sp) statusMap[sp.id]=s; });
+    let live=0; Object.values(statusMap).forEach(s=>{ if((s.status||"").startsWith("OK")||(s.status||"").startsWith("démarré")) live++; });
+    $("#liveCount").textContent=live;
+    $("#onair").classList.toggle("live", live>0);
+    renderSpeakers();
+  }catch(e){/* silencieux */}
+}
+
+function renderSpeakers(){
+  const g=$("#speakersGrid");
+  if(!speakers.length){ g.innerHTML=emptyState("Aucune enceinte","Ajoutez votre première Symfonisk avec son IP."); return; }
+  g.innerHTML=speakers.map(sp=>{
+    const st=statusMap[sp.id]||{};
+    const txt=st.status||"";
+    let cls="", pill='<span class="pill"><span class="dot"></span>en attente</span>';
+    if(st.reachable===false){ cls="down"; pill=`<span class="pill down"><span class="dot"></span>injoignable</span>`; }
+    else if(txt.startsWith("OK")||txt.startsWith("démarré")){ cls="playing"; pill=`<span class="pill live"><span class="dot"></span>en antenne</span>`; }
+    else if(st.reachable){ pill=`<span class="pill ok"><span class="dot"></span>en ligne</span>`; }
+    const desired = st.desired ? `<div class="statusline">▸ <span class="em">${esc(st.desired.stream)}</span> — ${esc(st.desired.slot)}</div>` : "";
+    const line = txt ? `<div class="statusline">${esc(txt)}${st.ts?` · <span style="color:var(--faint)">${esc(st.ts.slice(11,19))}</span>`:""}</div>` : "";
+    const opts = streams.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+    return `<div class="card ${cls} ${sp.enabled?"":"off"}">
+      <div class="strip"></div>
+      <div class="card-top">
+        <div><h3>${esc(sp.name)}</h3><div class="meta"><b>${esc(sp.ip)}</b>${sp.site?` · ${esc(sp.site)}`:""}${sp.enabled?"":" · désactivée"}</div></div>
+        ${pill}
+      </div>
+      ${desired}${line}
+      <div class="card-actions">
+        ${streams.length?`<select class="mini-sel act mini" id="play-${sp.id}" style="padding:6px 9px">${opts}</select>
+        <button class="act mini" data-act="play" data-id="${sp.id}">▶ Tester</button>`:""}
+        <button class="act mini" data-act="stop" data-id="${sp.id}">■ Stop</button>
+        <span style="flex:1"></span>
+        <button class="act mini ghost" data-act="edit-speaker" data-id="${sp.id}">Éditer</button>
+        <button class="act mini ghost danger" data-act="del-speaker" data-id="${sp.id}">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderStreams(){
+  const g=$("#streamsGrid");
+  if(!streams.length){ g.innerHTML=emptyState("Aucune webradio","Ajoutez une URL de flux HTTP."); return; }
+  g.innerHTML=streams.map(s=>{
+    const used=slots.filter(sl=>sl.stream_id===s.id).length;
+    return `<div class="card">
+      <div class="strip"></div>
+      <div class="card-top"><div><h3>${esc(s.name)}</h3>${s.title?`<div class="meta">« ${esc(s.title)} »</div>`:""}</div></div>
+      <div class="meta" style="margin-top:8px">${esc(s.url)}</div>
+      <div class="statusline">${used? `utilisée dans ${used} tranche${used>1?"s":""}`:"non programmée"}</div>
+      <div class="card-actions">
+        <span style="flex:1"></span>
+        <button class="act mini ghost" data-act="edit-stream" data-id="${s.id}">Éditer</button>
+        <button class="act mini ghost danger" data-act="del-stream" data-id="${s.id}">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderSlots(){
+  const c=$("#slotsList");
+  if(!slots.length){ c.innerHTML=emptyState("Aucune tranche horaire","Créez votre première plage de diffusion."); return; }
+  const sorted=[...slots].sort((a,b)=>a.start.localeCompare(b.start));
+  c.innerHTML=sorted.map(sl=>{
+    const sp=speakers.find(x=>x.id===sl.speaker_id), st=streams.find(x=>x.id===sl.stream_id);
+    const dset = sl.days.trim()? new Set(sl.days.split(",").map(Number)) : new Set([0,1,2,3,4,5,6]);
+    const chips = DAYS.map((d,i)=>`<div class="d ${dset.has(i)?"on":""}">${d}</div>`).join("");
+    return `<div class="slotrow ${sl.enabled?"":"off"}">
+      <div class="time">${esc(sl.start)}<span>→</span>${esc(sl.end)}</div>
+      <div class="chain">
+        ${sl.name?`<div style="color:var(--dim);font-size:11px;margin-bottom:3px">${esc(sl.name)}</div>`:""}
+        <span class="b">${esc(st?st.name:"?")}</span><span class="arrow">▸</span><span class="a">${esc(sp?sp.name:"?")}</span>
+        ${sl.volume!=null?`<span style="color:var(--faint)"> · vol ${sl.volume}</span>`:""}
+      </div>
+      <div class="days">${chips}</div>
+      <button class="act mini ghost" data-act="edit-slot" data-id="${sl.id}">Éditer</button>
+      <button class="act mini ghost danger" data-act="del-slot" data-id="${sl.id}">✕</button>
+    </div>`;
+  }).join("");
+}
+
+const emptyState=(big,sub)=>`<div class="empty"><div class="big">${big}</div>${sub}</div>`;
+
+// ---------- actions ----------
+async function playNow(id){
+  const sel=$("#play-"+id); if(!sel) return;
+  try{ await api("POST",`/api/speakers/${id}/play/${sel.value}`); flash(id,"démarré (test)"); }
+  catch(e){ alert("Échec : "+e.message); }
+}
+async function stopNow(id){
+  try{ await api("POST",`/api/speakers/${id}/stop`); flash(id,"arrêté"); }
+  catch(e){ alert("Échec : "+e.message); }
+}
+function flash(id,msg){ const s=statusMap[id]||{}; s.status=msg; s.reachable=true; statusMap[id]=s; renderSpeakers(); setTimeout(loadStatus,800); }
+async function forceSync(btn){ btn.disabled=true; btn.textContent="…"; try{ await api("POST","/api/reconcile"); await loadStatus(); }catch(e){} btn.textContent="⟲ Synchro"; btn.disabled=false; }
+async function delItem(kind,id,label){
+  if(!confirm(`Supprimer ${label} ?`)) return;
+  try{ await api("DELETE",`/api/${kind}/${id}`); await loadAll(); }
+  catch(e){ alert("Suppression impossible : "+e.message); }
+}
+
+// ---------- forms ----------
+let saveHandler=null;
+function showDialog(title, html, onSave){
+  $("#dlgTitle").textContent=title;
+  $("#dlgBody").innerHTML=html;
+  $("#dlgErr").style.display="none";
+  saveHandler=onSave;
+  dlg.showModal();
+}
+$("#dlgSave").onclick=async()=>{
+  try{ await saveHandler(); dlg.close(); await loadAll(); await loadStatus(); }
+  catch(e){ const el=$("#dlgErr"); el.textContent=e.message; el.style.display="block"; }
+};
+const val=id=>$("#"+id).value.trim();
+const checked=id=>$("#"+id).checked;
+
+function openSpeaker(sp){
+  const e=sp||{};
+  showDialog(sp?"Éditer l'enceinte":"Nouvelle enceinte",`
+    <div class="field"><label>Nom</label><input id="f_name" value="${esc(e.name||"")}" placeholder="Cuisine — Site Lyon" autofocus></div>
+    <div class="row2">
+      <div class="field"><label>Adresse IP</label><input id="f_ip" value="${esc(e.ip||"")}" placeholder="192.168.1.50"></div>
+      <div class="field"><label>Site</label><input id="f_site" value="${esc(e.site||"")}" placeholder="Lyon"></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="f_en" ${e.enabled!==false?"checked":""}><span class="track"></span>Enceinte activée</label>
+  `, async()=>{
+    const body={name:val("f_name"), ip:val("f_ip"), site:val("f_site"), enabled:checked("f_en")};
+    if(!body.name||!body.ip) throw new Error("Nom et IP requis");
+    await api(sp?"PUT":"POST", sp?`/api/speakers/${sp.id}`:"/api/speakers", body);
+  });
+}
+
+function openStream(s){
+  const e=s||{};
+  showDialog(s?"Éditer la webradio":"Nouvelle webradio",`
+    <div class="field"><label>Nom</label><input id="f_name" value="${esc(e.name||"")}" placeholder="FIP" autofocus></div>
+    <div class="field"><label>URL du flux</label><input id="f_url" value="${esc(e.url||"")}" placeholder="http://icecast.radiofrance.fr/fip-midfi.mp3">
+      <div class="hint">Flux HTTP continu (icecast/shoutcast/MP3). Évitez le https.</div></div>
+    <div class="field"><label>Titre affiché (option)</label><input id="f_title" value="${esc(e.title||"")}" placeholder="FIP — la radio musicale"></div>
+  `, async()=>{
+    const body={name:val("f_name"), url:val("f_url"), title:val("f_title")};
+    if(!body.name||!body.url) throw new Error("Nom et URL requis");
+    await api(s?"PUT":"POST", s?`/api/streams/${s.id}`:"/api/streams", body);
+  });
+}
+
+function openSlot(sl){
+  const e=sl||{};
+  if(!speakers.length||!streams.length){ alert("Ajoutez d'abord au moins une enceinte et une webradio."); return; }
+  const dset = e.days!==undefined && e.days.trim()? new Set(e.days.split(",").map(Number)) : new Set([0,1,2,3,4]);
+  const spOpts=speakers.map(s=>`<option value="${s.id}" ${e.speaker_id===s.id?"selected":""}>${esc(s.name)}</option>`).join("");
+  const stOpts=streams.map(s=>`<option value="${s.id}" ${e.stream_id===s.id?"selected":""}>${esc(s.name)}</option>`).join("");
+  showDialog(sl?"Éditer la tranche":"Nouvelle tranche horaire",`
+    <div class="field"><label>Nom (option)</label><input id="f_name" value="${esc(e.name||"")}" placeholder="Ambiance matin"></div>
+    <div class="row2">
+      <div class="field"><label>Webradio</label><select id="f_stream">${stOpts}</select></div>
+      <div class="field"><label>Enceinte</label><select id="f_speaker">${spOpts}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Début</label><input id="f_start" type="time" value="${esc(e.start||"08:00")}"></div>
+      <div class="field"><label>Fin</label><input id="f_end" type="time" value="${esc(e.end||"18:00")}">
+        <div class="hint">Fin avant début = passe minuit.</div></div>
+    </div>
+    <div class="field"><label>Jours</label>
+      <div class="dayspick" id="f_days">${DAYS.map((d,i)=>`<div class="d ${dset.has(i)?"on":""}" data-d="${i}" title="${DAYS_FULL[i]}">${d}</div>`).join("")}</div>
+      <div class="hint">Aucun sélectionné = tous les jours.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Volume (option)</label><input id="f_vol" type="number" min="0" max="100" value="${e.volume!=null?e.volume:""}" placeholder="inchangé"></div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <label class="switch"><input type="checkbox" id="f_en" ${e.enabled!==false?"checked":""}><span class="track"></span>Activée</label>
+      </div>
+    </div>
+  `, async()=>{
+    document.querySelectorAll("#f_days .d").forEach(d=>d.onclick=null);
+    const days=[...document.querySelectorAll("#f_days .d.on")].map(d=>d.dataset.d).join(",");
+    const volRaw=val("f_vol");
+    const body={
+      name:val("f_name"), speaker_id:+$("#f_speaker").value, stream_id:+$("#f_stream").value,
+      days, start:val("f_start"), end:val("f_end"),
+      volume: volRaw===""?null:Math.max(0,Math.min(100,+volRaw)), enabled:checked("f_en")
+    };
+    if(!body.start||!body.end) throw new Error("Début et fin requis");
+    await api(sl?"PUT":"POST", sl?`/api/slots/${sl.id}`:"/api/slots", body);
+  });
+  document.querySelectorAll("#f_days .d").forEach(d=>d.onclick=()=>d.classList.toggle("on"));
+}
+
+// ---------- délégation des actions par carte/ligne ----------
+// (plus aucun onclick inline avec des données utilisateur -> pas d'injection ni de
+//  casse sur les apostrophes ; on retrouve l'objet via son id dans les tableaux en mémoire)
+document.addEventListener("click", (e)=>{
+  const el=e.target.closest("[data-act]"); if(!el) return;
+  const id=+el.dataset.id;
+  switch(el.dataset.act){
+    case "play": return playNow(id);
+    case "stop": return stopNow(id);
+    case "edit-speaker": return openSpeaker(speakers.find(x=>x.id===id));
+    case "del-speaker": { const sp=speakers.find(x=>x.id===id); return delItem("speakers",id,sp?sp.name:"cette enceinte"); }
+    case "edit-stream": return openStream(streams.find(x=>x.id===id));
+    case "del-stream": { const s=streams.find(x=>x.id===id); return delItem("streams",id,s?s.name:"cette webradio"); }
+    case "edit-slot": return openSlot(slots.find(x=>x.id===id));
+    case "del-slot": return delItem("slots",id,"cette tranche");
+  }
+});
+
+// ---------- tabs ----------
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  $("#view-"+t.dataset.view).classList.add("active");
+});
+
+// ---------- clock ----------
+setInterval(()=>{ const d=new Date(); $("#clock").textContent=d.toLocaleTimeString("fr-FR"); },1000);
+
+// ---------- boot ----------
+loadAll().then(loadStatus).catch(e=>console.error(e));
+setInterval(loadStatus, 10000);
+</script>
+</body>
+</html>

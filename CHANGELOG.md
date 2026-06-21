@@ -1,0 +1,17 @@
+# Changelog
+
+All notable changes to this project are documented here. This file is managed
+automatically by [release-please](https://github.com/googleapis/release-please)
+from [Conventional Commits](https://www.conventionalcommits.org/).
+
+## 0.1.0 (unreleased)
+
+Initial public release.
+
+- Schedule web-radio (HTTP stream) playback on Sonos / Symfonisk speakers by IP,
+  across multiple sites.
+- Reconciler loop (desired-state model): automatic retry when a speaker was off at
+  the start of a slot, multi time-slot support, stop at end of slot.
+- Web UI ("broadcast console" theme), responsive.
+- Optional SSO protection via oauth2-proxy + an OIDC provider (Authentik bootstrap
+  included), with a toggle to run open (no auth).

@@ -1,0 +1,33 @@
+[Unit]
+Description=oauth2-proxy (Authentik SSO) devant Sonos Scheduler
+Documentation=https://oauth2-proxy.github.io/oauth2-proxy/
+After=network-online.target sonos-scheduler.service
+Wants=network-online.target
+Requires=sonos-scheduler.service
+
+[Container]
+Image=quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+# Réseau hôte : la façade écoute :8095 et relaie vers l'app interne 127.0.0.1:8096.
+Network=host
+# Secrets + valeurs propres au site (client_id/secret, cookie secret, OIDC_ISSUER_URL,
+# REDIRECT_URL) : écrits par le bootstrap dans cet EnvironmentFile, hors du dépôt.
+EnvironmentFile=%h/.config/sonos-scheduler/oauth2-proxy.env
+Environment=OAUTH2_PROXY_PROVIDER=oidc
+# Valeurs contenant des espaces -> QUOTER (systemd Environment= découpe sinon).
+Environment="OAUTH2_PROXY_PROVIDER_DISPLAY_NAME=Authentik SSO"
+Environment=OAUTH2_PROXY_UPSTREAMS=http://127.0.0.1:8096
+Environment=OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:8095
+Environment="OAUTH2_PROXY_SCOPE=openid profile email"
+Environment=OAUTH2_PROXY_EMAIL_DOMAINS=*
+# Authentik renvoie email_verified=false par défaut ; on fait confiance à l'IdP interne.
+Environment=OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL=true
+# Accès en http LAN (pas de TLS) : cookie non-secure assumé.
+Environment=OAUTH2_PROXY_COOKIE_SECURE=false
+Environment=OAUTH2_PROXY_SKIP_PROVIDER_BUTTON=true
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

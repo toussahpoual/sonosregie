@@ -1,0 +1,41 @@
+[project]
+name = "sonos-scheduler"
+version = "0.1.0"
+description = "Schedule web-radio playback on Sonos / Symfonisk speakers across multiple sites, by IP."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "GINC" }]
+keywords = ["sonos", "symfonisk", "soco", "webradio", "scheduler", "fastapi", "home-automation"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Framework :: FastAPI",
+  "Topic :: Multimedia :: Sound/Audio :: Players",
+  "Topic :: Home Automation",
+]
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn[standard]==0.34.0",
+  "sqlmodel==0.0.22",
+  "soco==0.30.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
+
+[project.urls]
+Homepage = "https://github.com/toussahpoual/sonosregie"
+Issues = "https://github.com/toussahpoual/sonosregie/issues"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["auth"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

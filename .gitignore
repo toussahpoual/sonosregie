@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Application data / local state (never commit the SQLite DB)
+data/
+*.db
+*.sqlite3
+
+# Local secrets / generated env (oauth2-proxy, tokens)
+oauth2-proxy.env
+*.env
+.env
+*authentik-token*
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
