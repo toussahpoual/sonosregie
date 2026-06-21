@@ -5,7 +5,6 @@
 .editorconfig
 *.md
 LICENSE
-auth/
 tests/
 data/
 **/__pycache__

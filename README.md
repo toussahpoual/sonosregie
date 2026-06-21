@@ -36,22 +36,26 @@ A **reconciler** runs every 30 s. For each speaker it computes the *desired stre
 `Slot` (speaker + stream + days `0=Mon..6=Sun` + start/end `HH:MM` + optional volume).
 If `end <= start`, the slot crosses midnight.
 
-## Quick start (Podman Quadlet, rootless)
+## Quick start (Podman Quadlet, rootless — no clone)
+
+Everything needed to deploy ships **inside the image** — no need to clone the repo.
 
 ```bash
-git clone https://github.com/toussahpoual/sonosregie.git
-cd sonosregie
-podman build -t localhost/sonosregie:latest .
+IMG=ghcr.io/toussahpoual/sonosregie:latest
+podman pull "$IMG" && podman tag "$IMG" localhost/sonosregie:latest
 
-mkdir -p ~/.local/share/sonosregie
-cp sonosregie.container ~/.config/containers/systemd/
+mkdir -p ~/.local/share/sonosregie ~/.config/sonosregie ~/.config/containers/systemd
+# the Quadlet unit is baked into the image:
+podman run --rm "$IMG" cat /srv/deploy/sonosregie.container \
+  > ~/.config/containers/systemd/sonosregie.container
 systemctl --user daemon-reload
 systemctl --user start sonosregie.service
+loginctl enable-linger "$USER"        # start at boot
 ```
 
-Open `http://YOUR_HOST_IP:8095/` — API docs at `/docs`. The container uses host
-networking (required to reach Sonos devices on the LAN) and stores its SQLite DB
-in `~/.local/share/sonosregie`.
+Open `http://YOUR_HOST_IP:8095/` — API docs at `/docs`. Host networking is required to
+reach Sonos devices on the LAN; the SQLite DB lives in `~/.local/share/sonosregie`. Set
+your timezone by editing `Environment=TZ=` in the installed unit.
 
 ### Run with Docker instead
 
@@ -70,27 +74,44 @@ uvicorn app.main:app --reload --port 8095
 
 ## Optional: protect with SSO (oauth2-proxy + OIDC)
 
-The app has **no built-in auth**. To gate it behind your identity provider, run the
-bundled oauth2-proxy in front; the app moves to an internal port. A bootstrap script
-for [Authentik](https://goauthentik.io/) is provided (other OIDC providers work too —
-just create the env file yourself, see `auth/.env.example`).
+The app has **no built-in auth**. To gate it, run the bundled oauth2-proxy in front; the
+app moves to an internal port. Switching modes needs **no script** — the image ships two
+app-unit variants (open vs internal) and the mode is just *which one you install*. A
+bootstrap for [Authentik](https://goauthentik.io/) is included (other OIDC providers:
+write the env yourself, see `auth/.env.example`). Everything below runs **from the image**.
 
 ```bash
-mkdir -p ~/.config/sonosregie
+IMG=ghcr.io/toussahpoual/sonosregie:latest
+
+# 1. configure the IdP + write the proxy secrets (from the image)
 export AUTHENTIK_TOKEN=...                       # admin API token
 podman run --rm --network host \
-  -e AUTHENTIK_TOKEN \
-  -e AUTHENTIK_URL=https://auth.example.com \
-  -e PUBLIC_HOST=YOUR_HOST_IP \
-  -v "$PWD/auth:/auth:z" \
+  -e AUTHENTIK_TOKEN -e AUTHENTIK_URL=https://auth.example.com -e PUBLIC_HOST=YOUR_HOST_IP \
   -v ~/.config/sonosregie:/out:Z \
-  localhost/sonosregie python /auth/authentik_bootstrap.py
-# -> creates provider + application + group "sonos-users",
+  "$IMG" python /srv/deploy/auth/authentik_bootstrap.py
+# -> provider + application + group "sonos-users";
 #    writes ~/.config/sonosregie/oauth2-proxy.env (0600, secrets)
 
-# Add your user to the "sonos-users" group in your IdP, then:
-./auth/set-mode.sh auth      # app internal :8096, oauth2-proxy on :8095
-./auth/set-mode.sh noauth     # back to open mode on :8095
+# 2. add your user to the "sonos-users" group in the IdP
+
+# 3. switch to the SSO units (app -> internal :8096, proxy -> :8095) and restart
+podman run --rm "$IMG" cat /srv/deploy/auth/sonosregie.container \
+  > ~/.config/containers/systemd/sonosregie.container
+podman run --rm "$IMG" cat /srv/deploy/auth/sonosregie-auth.container \
+  > ~/.config/containers/systemd/sonosregie-auth.container
+systemctl --user daemon-reload
+systemctl --user restart sonosregie.service
+systemctl --user start sonosregie-auth.service
+```
+
+Back to open mode (no script — reinstall the open unit, drop the proxy):
+
+```bash
+podman run --rm "$IMG" cat /srv/deploy/sonosregie.container \
+  > ~/.config/containers/systemd/sonosregie.container
+rm -f ~/.config/containers/systemd/sonosregie-auth.container
+systemctl --user stop sonosregie-auth.service
+systemctl --user daemon-reload && systemctl --user restart sonosregie.service
 ```
 
 Notes: access is over `http` on the LAN (cookie marked non-secure) — for HTTPS, put
