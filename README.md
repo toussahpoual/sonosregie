@@ -60,9 +60,10 @@ your timezone by editing `Environment=TZ=` in the installed unit.
 ### Run with Docker instead
 
 ```bash
-docker build -t sonosregie .
+docker pull ghcr.io/toussahpoual/sonosregie:latest
 docker run -d --name sonosregie --network host \
-  -v sonos-data:/data sonosregie
+  -e TZ=Europe/Paris -v sonos-data:/data --restart unless-stopped \
+  ghcr.io/toussahpoual/sonosregie:latest
 ```
 
 ### Develop locally (no container)
