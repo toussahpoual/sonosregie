@@ -117,6 +117,11 @@
 
   /* ---------- cards ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:16px}
+  /* en-tête de regroupement par lieu */
+  .group-head{display:flex;align-items:baseline;gap:12px;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .group-head:first-child{margin-top:2px}
+  .group-head .g-name{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:21px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-soft)}
+  .group-head .g-count{font-size:11px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
   .card{
     position:relative;background:linear-gradient(180deg,var(--panel),var(--bg2));
     border:1px solid var(--line);border-radius:var(--r);padding:18px;overflow:hidden;
@@ -255,7 +260,7 @@
       <div><div class="t">Enceintes</div><div class="sub">Vos Sonos / Symfonisk, jointes par IP. L'état est rafraîchi en continu par le réconciliateur.</div></div>
       <button class="act primary" onclick="openSpeaker()">+ Ajouter une enceinte</button>
     </div>
-    <div class="grid" id="speakersGrid"></div>
+    <div id="speakersGrid"></div>
   </section>
 
   <!-- WEBRADIOS -->
@@ -336,23 +341,33 @@ async function loadStatus(){
   }catch(e){/* silencieux */}
 }
 
-function renderSpeakers(){
-  const g=$("#speakersGrid");
-  if(!speakers.length){ g.innerHTML=emptyState("Aucune enceinte","Ajoutez votre première Symfonisk avec son IP."); return; }
-  g.innerHTML=speakers.map(sp=>{
-    const st=statusMap[sp.id]||{};
-    const txt=st.status||"";
-    let cls="", pill='<span class="pill"><span class="dot"></span>en attente</span>';
-    if(st.reachable===false){ cls="down"; pill=`<span class="pill down"><span class="dot"></span>injoignable</span>`; }
-    else if(txt.startsWith("OK")||txt.startsWith("démarré")){ cls="playing"; pill=`<span class="pill live"><span class="dot"></span>en antenne</span>`; }
-    else if(st.reachable){ pill=`<span class="pill ok"><span class="dot"></span>en ligne</span>`; }
-    const desired = st.desired ? `<div class="statusline">▸ <span class="em">${esc(st.desired.stream)}</span> — ${esc(st.desired.slot)}</div>` : "";
-    const line = txt ? `<div class="statusline">${esc(txt)}${st.ts?` · <span style="color:var(--faint)">${esc(st.ts.slice(11,19))}</span>`:""}</div>` : "";
-    const opts = streams.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
-    return `<div class="card ${cls} ${sp.enabled?"":"off"}">
+// Regroupe par lieu (champ `site`). Lieux triés alphabétiquement, « Sans lieu » en dernier.
+function groupBySite(items, siteOf){
+  const groups=new Map();
+  for(const it of items){
+    const key=(siteOf(it)||"").trim();
+    (groups.get(key) || groups.set(key,[]).get(key)).push(it);
+  }
+  return [...groups.entries()]
+    .sort((a,b)=> a[0]===b[0]?0 : a[0]===""?1 : b[0]===""?-1 : a[0].localeCompare(b[0]))
+    .map(([k,v])=>[k||"Sans lieu", v]);
+}
+const groupHead=(name,n,unit)=>`<div class="group-head"><span class="g-name">${esc(name)}</span><span class="g-count">${n} ${unit}${n>1?"s":""}</span></div>`;
+
+function speakerCard(sp){
+  const st=statusMap[sp.id]||{};
+  const txt=st.status||"";
+  let cls="", pill='<span class="pill"><span class="dot"></span>en attente</span>';
+  if(st.reachable===false){ cls="down"; pill=`<span class="pill down"><span class="dot"></span>injoignable</span>`; }
+  else if(txt.startsWith("OK")||txt.startsWith("démarré")){ cls="playing"; pill=`<span class="pill live"><span class="dot"></span>en antenne</span>`; }
+  else if(st.reachable){ pill=`<span class="pill ok"><span class="dot"></span>en ligne</span>`; }
+  const desired = st.desired ? `<div class="statusline">▸ <span class="em">${esc(st.desired.stream)}</span> — ${esc(st.desired.slot)}</div>` : "";
+  const line = txt ? `<div class="statusline">${esc(txt)}${st.ts?` · <span style="color:var(--faint)">${esc(st.ts.slice(11,19))}</span>`:""}</div>` : "";
+  const opts = streams.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  return `<div class="card ${cls} ${sp.enabled?"":"off"}">
       <div class="strip"></div>
       <div class="card-top">
-        <div><h3>${esc(sp.name)}</h3><div class="meta"><b>${esc(sp.ip)}</b>${sp.site?` · ${esc(sp.site)}`:""}${sp.enabled?"":" · désactivée"}</div></div>
+        <div><h3>${esc(sp.name)}</h3><div class="meta"><b>${esc(sp.ip)}</b>${sp.enabled?"":" · désactivée"}</div></div>
         ${pill}
       </div>
       ${desired}${line}
@@ -365,7 +380,14 @@ function renderSpeakers(){
         <button class="act mini ghost danger" data-act="del-speaker" data-id="${sp.id}">✕</button>
       </div>
     </div>`;
-  }).join("");
+}
+
+function renderSpeakers(){
+  const g=$("#speakersGrid");
+  if(!speakers.length){ g.innerHTML=emptyState("Aucune enceinte","Ajoutez votre première Symfonisk avec son IP."); return; }
+  g.innerHTML=groupBySite(speakers, sp=>sp.site).map(([site,list])=>
+    groupHead(site, list.length, "enceinte") + `<div class="grid">${list.map(speakerCard).join("")}</div>`
+  ).join("");
 }
 
 function renderStreams(){
@@ -387,15 +409,11 @@ function renderStreams(){
   }).join("");
 }
 
-function renderSlots(){
-  const c=$("#slotsList");
-  if(!slots.length){ c.innerHTML=emptyState("Aucune tranche horaire","Créez votre première plage de diffusion."); return; }
-  const sorted=[...slots].sort((a,b)=>a.start.localeCompare(b.start));
-  c.innerHTML=sorted.map(sl=>{
-    const sp=speakers.find(x=>x.id===sl.speaker_id), st=streams.find(x=>x.id===sl.stream_id);
-    const dset = sl.days.trim()? new Set(sl.days.split(",").map(Number)) : new Set([0,1,2,3,4,5,6]);
-    const chips = DAYS.map((d,i)=>`<div class="d ${dset.has(i)?"on":""}">${d}</div>`).join("");
-    return `<div class="slotrow ${sl.enabled?"":"off"}">
+function slotRow(sl){
+  const sp=speakers.find(x=>x.id===sl.speaker_id), st=streams.find(x=>x.id===sl.stream_id);
+  const dset = sl.days.trim()? new Set(sl.days.split(",").map(Number)) : new Set([0,1,2,3,4,5,6]);
+  const chips = DAYS.map((d,i)=>`<div class="d ${dset.has(i)?"on":""}">${d}</div>`).join("");
+  return `<div class="slotrow ${sl.enabled?"":"off"}">
       <div class="time">${esc(sl.start)}<span>→</span>${esc(sl.end)}</div>
       <div class="chain">
         ${sl.name?`<div style="color:var(--dim);font-size:11px;margin-bottom:3px">${esc(sl.name)}</div>`:""}
@@ -406,6 +424,15 @@ function renderSlots(){
       <button class="act mini ghost" data-act="edit-slot" data-id="${sl.id}">Éditer</button>
       <button class="act mini ghost danger" data-act="del-slot" data-id="${sl.id}">✕</button>
     </div>`;
+}
+
+function renderSlots(){
+  const c=$("#slotsList");
+  if(!slots.length){ c.innerHTML=emptyState("Aucune tranche horaire","Créez votre première plage de diffusion."); return; }
+  const siteOf = sl => { const sp=speakers.find(x=>x.id===sl.speaker_id); return sp?sp.site:""; };
+  c.innerHTML=groupBySite(slots, siteOf).map(([site,list])=>{
+    const rows=[...list].sort((a,b)=>a.start.localeCompare(b.start)).map(slotRow).join("");
+    return groupHead(site, list.length, "tranche") + rows;
   }).join("");
 }
 
