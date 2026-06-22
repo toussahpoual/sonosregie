@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This file is managed
 automatically by [release-please](https://github.com/googleapis/release-please)
 from [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.3.0](https://github.com/toussahpoual/sonosregie/compare/sonosregie-v0.2.1...sonosregie-v0.3.0) (2026-06-22)
+
+
+### Features
+
+* group speakers and schedules by location in the UI ([60186c5](https://github.com/toussahpoual/sonosregie/commit/60186c5b63493d6fea57a373489cf30c161116b6))
+
 ## [0.2.1](https://github.com/toussahpoual/sonosregie/compare/sonosregie-v0.2.0...sonosregie-v0.2.1) (2026-06-21)
 
 
